@@ -44,3 +44,115 @@ Here are a few starter repositories if you would like to use our tech stack:
 - The use of AI coding assistants is permitted. However, please ensure the submission represents your own understanding, as you will be required to explain, justify and extend your code during the interview
 
 Happy coding!
+
+---
+
+## Solution Overview
+
+- **Backend**: TypeScript + Express with Prisma/SQLite, validation via Zod, Jest + Supertest tests, Swagger UI docs on `/docs`.
+- **Frontend**: React + Vite + TypeScript, React Hook Form with Zod validation, Vitest + Testing Library for UI tests.
+- **Database**: Prisma migrations targeting SQLite (stored in `backend/prisma`).
+- **Tooling**: ESLint/Prettier in both apps, Dockerfiles for independent builds, `docker-compose.yml` for combined stack, health check at `/health`.
+- **Validation**: API rejects malformed payloads and due dates set in the past; the UI mirrors these rules before calling the backend.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- npm 9+
+- (Optional) Docker 24+ and Docker Compose v2 for containerised runs
+
+### Backend Setup
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev
+```
+
+The API will be available at `http://localhost:4000`. Swagger documentation lives at `http://localhost:4000/docs`.
+
+### Frontend Setup
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+The UI will be served from `http://localhost:5173` and proxies API requests to the backend when both run locally.
+
+### Running Tests
+
+- **Backend**: `cd backend && npm test`
+- **Frontend**: `cd frontend && npm test`
+
+### Docker Compose
+
+To build and run both services together:
+
+```bash
+docker compose up --build
+```
+
+This exposes the backend on `http://localhost:4000` and the frontend on `http://localhost:5173`.
+
+## API Reference
+
+- `POST /api/tasks` – create a task. Body schema:
+	```json
+	{
+		"title": "Review case files",
+		"description": "Optional context",
+		"status": "NEW",
+		"dueDateTime": "2030-01-01T09:00:00.000Z"
+	}
+	```
+- Success response (`201`):
+	```json
+	{
+		"message": "Task created successfully",
+		"data": {
+			"id": 1,
+			"title": "Review case files",
+			"description": "Optional context",
+			"status": "NEW",
+			"dueDateTime": "2030-01-01T09:00:00.000Z",
+			"createdAt": "2030-01-01T08:00:00.000Z",
+			"updatedAt": "2030-01-01T08:00:00.000Z"
+		}
+	}
+	```
+- Validation errors return `400` with an array of field-level issues.
+
+## Project Structure
+
+```
+backend/
+	src/
+		controllers/
+		docs/
+		middleware/
+		routes/
+		schemas/
+	prisma/
+	tests/
+frontend/
+	src/
+		api/
+		components/
+	vitest setup & tests
+docker-compose.yml
+```
+
+## Future Enhancements
+
+- Add authentication and per-user task segregation.
+- Extend API with listing or filtering endpoints.
+- Persist tasks in a managed database (PostgreSQL) for production readiness.
+- Integrate accessibility and cross-browser automated checks in the CI pipeline.
