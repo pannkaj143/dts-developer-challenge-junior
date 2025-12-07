@@ -1,69 +1,95 @@
 # DTS Developer Technical Test - Junior Software Developer
 
-## Objective
-To assess your ability to build a simple API and frontend using best coding practices.
+## Challenge Brief
 
-Please aim to spend no more than 2.5 hours on this task.
+### Objective
+Assess your ability to build a simple API and companion frontend using solid coding practices. Aim to spend no more than 2.5 hours on the exercise.
 
-## Scenario
-HMCTS requires a new system to be developed so caseworkers can keep track of their tasks.
+### Scenario
+HMCTS needs a system that lets caseworkers capture and review tasks. Your assignment is to deliver:
 
-Your technical test is to develop a new system to facilitate the creation of these tasks.
+- A backend API that creates new tasks.
+- A frontend experience that allows users to submit tasks and view the confirmation details.
 
-## Task Requirements
+Each task includes:
 
-You are required to create a backend API that allows for the creation of new tasks, and a frontend application to interact with this.
+- `title` (required)
+- `description` (optional)
+- `status`
+- `dueDateTime`
 
-A task should have the following properties:
-- Title
-- Description (optional field)
-- Status
-- Due date/time
+A successful submission returns the created task via the API and displays it on the frontend. No additional CRUD endpoints are required.
 
-On successful task creation, the API should return the task and the frontend display a confirmation message alongside the successfully created task details.
+### Technical Requirements
 
-No other CRUD operations related to the management of tasks are required.
+- Backend: any OOP language/framework
+- Frontend: any language/framework
+- Include unit tests
+- Persist data in a database
+- Provide validation & error handling
+- Document API endpoints
 
-## Technical Requirements
-You can find the technical criteria for this challenge below:
+Reference starter repos:
 
-- **Backend**: Any OOP language and framework of your choice
-- **Frontend**: Any language and framework of your choice
-- Implement **unit tests**
-- Store data in a **database**
-- Include **validation and error handling**
-- **Document API endpoints**
-
-Here are a few starter repositories if you would like to use our tech stack:
-- [Backend Starter Repo](https://github.com/hmcts/hmcts-dev-test-backend)
-- [Frontend Starter Repo](https://github.com/hmcts/hmcts-dev-test-frontend)
-
-## Submission Guidelines
-- Create repositories on GitHub and add the links to your application
-- Include a helpful `README.md`!
-- The use of AI coding assistants is permitted. However, please ensure the submission represents your own understanding, as you will be required to explain, justify and extend your code during the interview
-
-Happy coding!
+- [Backend starter](https://github.com/hmcts/hmcts-dev-test-backend)
+- [Frontend starter](https://github.com/hmcts/hmcts-dev-test-frontend)
 
 ---
 
-## Solution Overview
+## Solution Snapshot
 
-- **Backend**: TypeScript + Express with Prisma/SQLite, validation via Zod, Jest + Supertest tests, Swagger UI docs on `/docs`.
-- **Frontend**: React + Vite + TypeScript, React Hook Form with Zod validation, Vitest + Testing Library for UI tests.
-- **Database**: Prisma migrations targeting SQLite (stored in `backend/prisma`).
-- **Tooling**: ESLint/Prettier in both apps, Dockerfiles for independent builds, `docker-compose.yml` for combined stack, health check at `/health`.
-- **Validation**: API rejects malformed payloads and due dates set in the past; the UI mirrors these rules before calling the backend.
+- **Backend**: TypeScript + Express, Prisma ORM with SQLite, Zod validation, Jest + Supertest tests, Swagger UI at `/docs`.
+- **Frontend**: React + Vite + TypeScript, React Hook Form + Zod, Vitest + Testing Library tests, confirmation banner with latest task details.
+- **Data Layer**: Prisma migrations live in `backend/prisma`; Jest uses an isolated SQLite file to mirror the production schema.
+- **Tooling**: ESLint + Prettier for both apps, Dockerfiles for individual services, `docker-compose.yml` for a full stack spin-up, and a `/health` endpoint for readiness checks.
 
-## Getting Started
+## Architecture Overview
 
-### Prerequisites
+```
+┌───────────────┐        POST /api/tasks        ┌───────────────┐
+│  React UI     │ ─────────────────────────────▶│ Express API   │
+│ (Vite dev)    │                               │ (Prisma ORM)  │
+│               │◀──────────────────────────────┤               │
+│ Form submits  │      201 + task payload       │ Persists to   │
+│ via fetch     │                               │ SQLite DB     │
+└───────────────┘                               └───────────────┘
+```
 
-- Node.js 20+
-- npm 9+
-- (Optional) Docker 24+ and Docker Compose v2 for containerised runs
+- Vite proxies `/api/*` during local development so the UI can talk to `localhost:4000` without CORS issues.
+- Swagger UI documents the API contract at `/docs`.
+- Docker Compose runs both services; the Nginx-based frontend container proxies `/api` requests to the backend container.
 
-### Backend Setup
+## Feature Highlights
+
+- Create tasks with `title`, optional `description`, required `status` (`NEW`, `IN_PROGRESS`, `DONE`) and a **future** ISO 8601 `dueDateTime`.
+- UI mirrors backend validation before sending requests and displays inline error messaging and success confirmation.
+- Centralised Express error handler returns consistent JSON payloads (`message` + optional `details`).
+- Jest/Vitest suites ensure task creation flow, validation, and UI feedback behave as expected.
+
+## Prerequisites
+
+- Node.js **20.x**
+- npm **9.x**
+- (Optional) Docker **24+** with Compose v2
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable       | Default                | Purpose                             |
+| -------------- | ---------------------- | ----------------------------------- |
+| `DATABASE_URL` | `file:./prisma/dev.db` | SQLite database location for Prisma |
+| `PORT`         | `4000`                 | HTTP port for the API server        |
+
+### Frontend (`frontend/.env`)
+
+| Variable            | Default | Purpose                                                                      |
+| ------------------- | ------- | ---------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL` | `` (blank) | Optional override for API origin. Leave blank in dev to rely on Vite proxy. |
+
+## Setup & Development
+
+### Backend (API)
 
 ```bash
 cd backend
@@ -74,9 +100,11 @@ npm run prisma:migrate
 npm run dev
 ```
 
-The API will be available at `http://localhost:4000`. Swagger documentation lives at `http://localhost:4000/docs`.
+- API listens on `http://localhost:4000`.
+- Swagger docs available at `http://localhost:4000/docs`.
+- `npm run prisma:migrate` applies the existing migration. Use `npm run prisma:migrate -- --name <name>` when adding new schema changes.
 
-### Frontend Setup
+### Frontend (React UI)
 
 ```bash
 cd frontend
@@ -85,74 +113,144 @@ npm install
 npm run dev
 ```
 
-The UI will be served from `http://localhost:5173` and proxies API requests to the backend when both run locally.
+- Dev server runs on `http://localhost:5173`.
+- During development, `/api/*` requests proxy to the backend.
 
-### Running Tests
+### Available Scripts
 
-- **Backend**: `cd backend && npm test`
-- **Frontend**: `cd frontend && npm test`
+| Location | Command | Description |
+| -------- | ------- | ----------- |
+| backend  | `npm run dev` | Start Express server with `tsx` watcher |
+| backend  | `npm run build` | Type-check & transpile TypeScript to `dist/` |
+| backend  | `npm start` | Run compiled server from `dist/server.js` |
+| backend  | `npm test` | Run Jest suite (serialised to avoid SQLite locks) |
+| backend  | `npm run lint` | ESLint TypeScript sources |
+| frontend | `npm run dev` | Launch Vite dev server |
+| frontend | `npm run build` | Produce production bundle |
+| frontend | `npm run preview` | Preview the production build locally |
+| frontend | `npm test` | Run Vitest + Testing Library suite |
+| frontend | `npm run lint` | ESLint React sources |
 
-### Docker Compose
+## Validation Rules
 
-To build and run both services together:
+| Field         | Rules enforced | Layer |
+| ------------- | -------------- | ----- |
+| `title`       | Required, trimmed, non-empty | API + UI |
+| `description` | Optional, trimmed, ≤ 1000 characters (UI) | UI |
+| `status`      | One of `NEW`, `IN_PROGRESS`, `DONE` | API + UI |
+| `dueDateTime` | Required ISO 8601 string **strictly in the future** | API + UI |
 
-```bash
-docker compose up --build
+The API returns HTTP `400` for validation failures with field-level detail, e.g.
+
+```json
+{
+	"message": "Validation failed",
+	"details": [
+		{"path": "dueDateTime", "message": "Due date/time must be in the future"}
+	]
+}
 ```
-
-This exposes the backend on `http://localhost:4000` and the frontend on `http://localhost:5173`.
 
 ## API Reference
 
-- `POST /api/tasks` – create a task. Body schema:
-	```json
-	{
+`POST /api/tasks`
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `title` | string | ✅ | Non-empty |
+| `description` | string | ❌ | Optional context |
+| `status` | string | ✅ | `NEW`, `IN_PROGRESS`, or `DONE` |
+| `dueDateTime` | string | ✅ | Future ISO 8601 timestamp |
+
+Example request:
+
+```json
+{
+	"title": "Review case files",
+	"description": "Prepare bundle for hearing",
+	"status": "NEW",
+	"dueDateTime": "2030-01-01T09:00:00.000Z"
+}
+```
+
+Success response (`201`):
+
+```json
+{
+	"message": "Task created successfully",
+	"data": {
+		"id": 1,
 		"title": "Review case files",
-		"description": "Optional context",
+		"description": "Prepare bundle for hearing",
 		"status": "NEW",
-		"dueDateTime": "2030-01-01T09:00:00.000Z"
+		"dueDateTime": "2030-01-01T09:00:00.000Z",
+		"createdAt": "2030-01-01T08:00:00.000Z",
+		"updatedAt": "2030-01-01T08:00:00.000Z"
 	}
-	```
-- Success response (`201`):
-	```json
-	{
-		"message": "Task created successfully",
-		"data": {
-			"id": 1,
-			"title": "Review case files",
-			"description": "Optional context",
-			"status": "NEW",
-			"dueDateTime": "2030-01-01T09:00:00.000Z",
-			"createdAt": "2030-01-01T08:00:00.000Z",
-			"updatedAt": "2030-01-01T08:00:00.000Z"
-		}
-	}
-	```
-- Validation errors return `400` with an array of field-level issues.
+}
+```
+
+More endpoints and schemas are available via Swagger UI.
+
+## Testing Strategy
+
+- **Backend**: Jest + Supertest cover happy path creation and validation failures. The suite runs with `maxWorkers=1` to avoid SQLite locking while sharing a test database file.
+- **Frontend**: Vitest + Testing Library simulate user interactions, verifying success banners and prevention of past-due submissions.
+- Execute suites independently: `npm test` inside `backend/` and `frontend/`.
 
 ## Project Structure
 
 ```
 backend/
+	prisma/
+		migrations/
+		schema.prisma
 	src/
 		controllers/
 		docs/
+		lib/
 		middleware/
 		routes/
 		schemas/
-	prisma/
 	tests/
 frontend/
 	src/
 		api/
 		components/
-	vitest setup & tests
-docker-compose.yml
+		App.test.tsx
+	vite.config.ts
+	index.html
+Dockerfile (per app) & docker-compose.yml
 ```
+
+## Running with Docker
+
+```bash
+docker compose up --build
+```
+
+- Backend → `http://localhost:4000`
+- Swagger → `http://localhost:4000/docs`
+- Frontend → `http://localhost:5173`
+
+Stop containers with:
+
+```bash
+docker compose down
+```
+
+## Troubleshooting
+
+- **`DATABASE_URL` missing**: copy `backend/.env.example` to `.env` or export the variable before running Prisma commands.
+- **`@prisma/client` runtime missing**: run `npm run prisma:generate` after installing dependencies or editing the schema.
+- **Frontend cannot reach API in production**: set `VITE_API_BASE_URL` to the deployed backend URL during the build.
+- **Jest SQLite locks**: delete `backend/prisma/test.db` and re-run `npm test`.
 
 ## Future Enhancements
 
-- Add authentication and per-user task segregation.
-- Extend API with listing or filtering endpoints.
-- Persist tasks in a managed database (PostgreSQL) for production readiness.
-- Integrate accessibility and cross-browser automated checks in the CI pipeline.
+- Add authentication and user-based task segregation.
+- Provide listing/filtering endpoints with pagination and sorting.
+- Switch to PostgreSQL or another managed datastore for production deployments.
+- Embed lint/test automation into CI and add automated accessibility/security checks.
+
+Happy coding!
